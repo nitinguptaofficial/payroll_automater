@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Salary Sheet - SalaryPro</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <nav class="sidebar">
+        <div class="logo">
+          <i class="fas fa-coins"></i>
+          <span>SalaryPro</span>
+        </div>
+        <ul class="nav-links">
+          <li>
+            <a href="/">
+              <i class="fas fa-home"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/attendance">
+              <i class="fas fa-calendar-check"></i>
+              <span>Attendance</span>
+            </a>
+          </li>
+          <li class="active">
+            <a href="/salary">
+              <i class="fas fa-money-bill-wave"></i>
+              <span>Salary Sheet</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <main class="main-content">
+        <header class="page-header">
+          <h1>Salary Sheet</h1>
+          <p>Calculated salaries based on attendance data</p>
+        </header>
+
+        <!-- Summary Cards -->
+        <div class="summary-cards">
+          <div class="summary-card">
+            <div class="summary-icon blue">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="summary-content">
+              <span class="summary-label">Total Employees</span>
+              <span class="summary-value" id="totalEmployees">0</span>
+            </div>
+          </div>
+          <div class="summary-card">
+            <div class="summary-icon green">
+              <i class="fas fa-rupee-sign"></i>
+            </div>
+            <div class="summary-content">
+              <span class="summary-label">Total Annual Payout</span>
+              <span class="summary-value" id="grandTotal">₹0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Working Days Settings -->
+        <div class="settings-section">
+          <button class="btn btn-secondary" onclick="toggleWorkingDays()">
+            <i class="fas fa-cog"></i> Configure Working Days
+          </button>
+          <div id="workingDaysPanel" class="working-days-panel hidden">
+            <h3>Working Days per Month (2025)</h3>
+            <div class="working-days-grid" id="workingDaysGrid">
+              <!-- Loaded dynamically -->
+            </div>
+            <button class="btn btn-primary" onclick="saveWorkingDays()">
+              <i class="fas fa-save"></i> Save Changes
+            </button>
+          </div>
+        </div>
+
+        <!-- Salary Table -->
+        <div class="table-section salary-table-section">
+          <div class="table-header">
+            <h2><i class="fas fa-calculator"></i> Monthly Salary Breakdown</h2>
+            <div class="table-actions">
+              <div class="export-buttons">
+                <a href="/api/export/salary/csv" class="btn btn-export">
+                  <i class="fas fa-file-csv"></i> Export CSV
+                </a>
+                <a href="/api/export/salary/excel" class="btn btn-export">
+                  <i class="fas fa-file-excel"></i> Export Excel
+                </a>
+              </div>
+              <div class="formula-reminder">
+                Formula:
+                <code>(Package ÷ 271) × (Working Days - Absent Days)</code>
+              </div>
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table salary-table" id="salaryTable">
+              <thead>
+                <tr>
+                  <th class="sticky-col">Employee Name</th>
+                  <th>Jan</th>
+                  <th>Feb</th>
+                  <th>Mar</th>
+                  <th>Apr</th>
+                  <th>May</th>
+                  <th>Jun</th>
+                  <th>Jul</th>
+                  <th>Aug</th>
+                  <th>Sep</th>
+                  <th>Oct</th>
+                  <th>Nov</th>
+                  <th>Dec</th>
+                  <th class="total-col">Total Salary</th>
+                </tr>
+              </thead>
+              <tbody id="salaryTableBody">
+                <!-- Data loaded dynamically -->
+              </tbody>
+              <tfoot id="salaryTableFoot">
+                <!-- Monthly totals loaded dynamically -->
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <script>
+      const months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+      let workingDays = {};
+
+      // Load data on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        loadSalaryData();
+        loadWorkingDays();
+      });
+
+      async function loadSalaryData() {
+        try {
+          const response = await fetch("/api/salary-data");
+          const data = await response.json();
+          renderSalaryTable(data);
+          document.getElementById("totalEmployees").textContent =
+            data.employees.length;
+          document.getElementById("grandTotal").textContent =
+            "₹" + data.grand_total.toLocaleString("en-IN");
+        } catch (error) {
+          showToast("Error loading salary data", "error");
+        }
+      }
+
+      async function loadWorkingDays() {
+        try {
+          const response = await fetch("/api/working-days");
+          workingDays = await response.json();
+          renderWorkingDaysPanel();
+        } catch (error) {
+          showToast("Error loading working days", "error");
+        }
+      }
+
+      function renderSalaryTable(data) {
+        const tbody = document.getElementById("salaryTableBody");
+        const tfoot = document.getElementById("salaryTableFoot");
+        tbody.innerHTML = "";
+        tfoot.innerHTML = "";
+
+        if (data.employees.length === 0) {
+          tbody.innerHTML = `
+                    <tr>
+                        <td colspan="14" class="empty-state">
+                            <i class="fas fa-calculator"></i>
+                            <p>No salary data available. Add employees and attendance first!</p>
+                            <a href="/attendance" class="btn btn-primary">
+                                <i class="fas fa-plus"></i> Add Employees
+                            </a>
+                        </td>
+                    </tr>
+                `;
+          return;
+        }
+
+        // Render employee rows
+        data.employees.forEach((emp) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td class="sticky-col">
+                        <div class="employee-info">
+                            <span class="emp-name">${emp.name}</span>
+                            <span class="emp-package">₹${Number(
+                              emp.annual_package
+                            ).toLocaleString("en-IN")}/yr</span>
+                        </div>
+                    </td>
+                    ${months
+                      .map(
+                        (month) => `
+                        <td class="salary-cell">₹${emp.monthly_salaries[
+                          month
+                        ].toLocaleString("en-IN")}</td>
+                    `
+                      )
+                      .join("")}
+                    <td class="total-col total-value">₹${emp.total_salary.toLocaleString(
+                      "en-IN"
+                    )}</td>
+                `;
+          tbody.appendChild(row);
+        });
+
+        // Render footer with monthly totals
+        const footRow = document.createElement("tr");
+        footRow.className = "totals-row";
+        footRow.innerHTML = `
+                <td class="sticky-col"><strong>Monthly Total</strong></td>
+                ${months
+                  .map(
+                    (month) => `
+                    <td class="monthly-total">₹${data.monthly_totals[
+                      month
+                    ].toLocaleString("en-IN")}</td>
+                `
+                  )
+                  .join("")}
+                <td class="total-col grand-total">₹${data.grand_total.toLocaleString(
+                  "en-IN"
+                )}</td>
+            `;
+        tfoot.appendChild(footRow);
+
+        // Add working days info row
+        const workingDaysRow = document.createElement("tr");
+        workingDaysRow.className = "working-days-row";
+        workingDaysRow.innerHTML = `
+                <td class="sticky-col"><em>Working Days</em></td>
+                ${months
+                  .map(
+                    (month) => `
+                    <td class="working-days-cell">${data.working_days[month]} days</td>
+                `
+                  )
+                  .join("")}
+                <td class="total-col">-</td>
+            `;
+        tfoot.appendChild(workingDaysRow);
+      }
+
+      function renderWorkingDaysPanel() {
+        const grid = document.getElementById("workingDaysGrid");
+        grid.innerHTML = months
+          .map(
+            (month) => `
+                <div class="working-day-item">
+                    <label>${month.substring(0, 3)}</label>
+                    <input type="number" min="0" max="31" value="${
+                      workingDays[month]
+                    }" 
+                           data-month="${month}" class="working-day-input">
+                </div>
+            `
+          )
+          .join("");
+      }
+
+      function toggleWorkingDays() {
+        const panel = document.getElementById("workingDaysPanel");
+        panel.classList.toggle("hidden");
+      }
+
+      async function saveWorkingDays() {
+        const inputs = document.querySelectorAll(".working-day-input");
+        const newWorkingDays = {};
+
+        inputs.forEach((input) => {
+          newWorkingDays[input.dataset.month] = parseInt(input.value) || 0;
+        });
+
+        try {
+          const response = await fetch("/api/working-days", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(newWorkingDays),
+          });
+          const result = await response.json();
+          if (result.success) {
+            showToast("Working days updated!", "success");
+            workingDays = result.working_days;
+            loadSalaryData();
+          }
+        } catch (error) {
+          showToast("Error saving working days", "error");
+        }
+      }
+
+      function showToast(message, type) {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove("show"), 3000);
+      }
+    </script>
+  </body>
+</html>

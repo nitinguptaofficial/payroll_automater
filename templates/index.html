@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Salary Management System</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <nav class="sidebar">
+        <div class="logo">
+          <i class="fas fa-coins"></i>
+          <span>SalaryPro</span>
+        </div>
+        <ul class="nav-links">
+          <li class="active">
+            <a href="/">
+              <i class="fas fa-home"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li>
+            <a href="/attendance">
+              <i class="fas fa-calendar-check"></i>
+              <span>Attendance</span>
+            </a>
+          </li>
+          <li>
+            <a href="/salary">
+              <i class="fas fa-money-bill-wave"></i>
+              <span>Salary Sheet</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <main class="main-content">
+        <header class="page-header">
+          <h1>Dashboard</h1>
+          <p>Welcome to the Salary Management System</p>
+        </header>
+
+        <div class="dashboard-cards">
+          <div class="card" onclick="window.location.href='/attendance'">
+            <div class="card-icon blue">
+              <i class="fas fa-users"></i>
+            </div>
+            <div class="card-content">
+              <h3>Employee Attendance</h3>
+              <p>Manage employee details and track monthly absences</p>
+            </div>
+            <div class="card-arrow">
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+
+          <div class="card" onclick="window.location.href='/salary'">
+            <div class="card-icon green">
+              <i class="fas fa-calculator"></i>
+            </div>
+            <div class="card-content">
+              <h3>Salary Calculation</h3>
+              <p>View calculated salaries based on attendance data</p>
+            </div>
+            <div class="card-arrow">
+              <i class="fas fa-arrow-right"></i>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <div class="info-card">
+            <h3><i class="fas fa-info-circle"></i> How It Works</h3>
+            <div class="formula-box">
+              <p><strong>Salary Formula:</strong></p>
+              <code>(Annual Package ÷ 271) × (Working Days - Absent Days)</code>
+            </div>
+            <ul class="steps-list">
+              <li>
+                <span class="step-num">1</span> Add employees with their annual
+                package
+              </li>
+              <li>
+                <span class="step-num">2</span> Enter absence days for each
+                month
+              </li>
+              <li>
+                <span class="step-num">3</span> View calculated salaries
+                automatically
+              </li>
+            </ul>
+          </div>
+
+          <div class="info-card">
+            <h3><i class="fas fa-database"></i> Data Storage</h3>
+            <p>
+              All data is stored locally in an Excel file
+              (<code>employee_data.xlsx</code>). No database connection
+              required.
+            </p>
+            <div class="features">
+              <div class="feature">
+                <i class="fas fa-check-circle"></i>
+                <span>Automatic calculations</span>
+              </div>
+              <div class="feature">
+                <i class="fas fa-check-circle"></i>
+                <span>Monthly summaries</span>
+              </div>
+              <div class="feature">
+                <i class="fas fa-check-circle"></i>
+                <span>Easy data export</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>

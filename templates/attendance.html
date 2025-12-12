@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Employee Attendance - SalaryPro</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <div class="app-container">
+      <nav class="sidebar">
+        <div class="logo">
+          <i class="fas fa-coins"></i>
+          <span>SalaryPro</span>
+        </div>
+        <ul class="nav-links">
+          <li>
+            <a href="/">
+              <i class="fas fa-home"></i>
+              <span>Dashboard</span>
+            </a>
+          </li>
+          <li class="active">
+            <a href="/attendance">
+              <i class="fas fa-calendar-check"></i>
+              <span>Attendance</span>
+            </a>
+          </li>
+          <li>
+            <a href="/salary">
+              <i class="fas fa-money-bill-wave"></i>
+              <span>Salary Sheet</span>
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <main class="main-content">
+        <header class="page-header">
+          <h1>Employee Attendance</h1>
+          <p>Manage employees and track monthly absences</p>
+        </header>
+
+        <!-- Add Employee Form -->
+        <div class="form-section">
+          <h2><i class="fas fa-user-plus"></i> Add New Employee</h2>
+          <form id="addEmployeeForm" class="add-form">
+            <div class="form-group">
+              <label for="empName">Employee Name</label>
+              <input
+                type="text"
+                id="empName"
+                placeholder="Enter employee name"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label for="empPackage">Annual Package (₹)</label>
+              <input
+                type="number"
+                id="empPackage"
+                placeholder="Enter annual package"
+                required
+              />
+            </div>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-plus"></i> Add Employee
+            </button>
+          </form>
+        </div>
+
+        <!-- Employee Table -->
+        <div class="table-section">
+          <div class="table-header">
+            <h2><i class="fas fa-table"></i> Employee Attendance Data</h2>
+            <div class="table-actions">
+              <div class="export-buttons">
+                <a href="/api/export/attendance/csv" class="btn btn-export">
+                  <i class="fas fa-file-csv"></i> Export CSV
+                </a>
+                <a href="/api/export/attendance/excel" class="btn btn-export">
+                  <i class="fas fa-file-excel"></i> Export Excel
+                </a>
+              </div>
+              <span class="badge"
+                >Total Employees: <span id="employeeCount">0</span></span
+              >
+            </div>
+          </div>
+
+          <div class="table-wrapper">
+            <table class="data-table" id="attendanceTable">
+              <thead>
+                <tr>
+                  <th class="sticky-col">Name</th>
+                  <th>Annual Package (₹)</th>
+                  <th>Jan</th>
+                  <th>Feb</th>
+                  <th>Mar</th>
+                  <th>Apr</th>
+                  <th>May</th>
+                  <th>Jun</th>
+                  <th>Jul</th>
+                  <th>Aug</th>
+                  <th>Sep</th>
+                  <th>Oct</th>
+                  <th>Nov</th>
+                  <th>Dec</th>
+                  <th>Remarks</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="employeeTableBody">
+                <!-- Data loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+          <p class="table-note">
+            <i class="fas fa-info-circle"></i> Click on any absence cell to edit
+            the number of days absent. Click on remarks to view/edit.
+          </p>
+        </div>
+      </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast"></div>
+
+    <!-- Remarks Modal -->
+    <div id="remarksModal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3><i class="fas fa-comment-alt"></i> Employee Remarks</h3>
+          <button class="modal-close" onclick="closeRemarksModal()">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        <div class="modal-body">
+          <label for="remarksText"
+            >Remarks for <span id="remarksEmployeeName"></span
+          ></label>
+          <textarea
+            id="remarksText"
+            placeholder="Enter remarks here..."
+            rows="5"
+          ></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-secondary" onclick="closeRemarksModal()">
+            Cancel
+          </button>
+          <button class="btn btn-primary" onclick="saveRemarks()">
+            <i class="fas fa-save"></i> Save
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+      ];
+
+      // Load employees on page load
+      document.addEventListener("DOMContentLoaded", loadEmployees);
+
+      // Add employee form submission
+      document
+        .getElementById("addEmployeeForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const name = document.getElementById("empName").value;
+          const annual_package = document.getElementById("empPackage").value;
+
+          try {
+            const response = await fetch("/api/employees", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name, annual_package }),
+            });
+            const result = await response.json();
+            if (result.success) {
+              showToast("Employee added successfully!", "success");
+              document.getElementById("addEmployeeForm").reset();
+              loadEmployees();
+            }
+          } catch (error) {
+            showToast("Error adding employee", "error");
+          }
+        });
+
+      async function loadEmployees() {
+        try {
+          const response = await fetch("/api/employees");
+          const employees = await response.json();
+          renderTable(employees);
+          document.getElementById("employeeCount").textContent =
+            employees.length;
+        } catch (error) {
+          showToast("Error loading employees", "error");
+        }
+      }
+
+      function renderTable(employees) {
+        const tbody = document.getElementById("employeeTableBody");
+        tbody.innerHTML = "";
+
+        if (employees.length === 0) {
+          tbody.innerHTML = `
+                    <tr>
+                        <td colspan="16" class="empty-state">
+                            <i class="fas fa-users"></i>
+                            <p>No employees added yet. Add your first employee above!</p>
+                        </td>
+                    </tr>
+                `;
+          return;
+        }
+
+        employees.forEach((emp, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+                    <td class="sticky-col">${emp.Name}</td>
+                    <td class="package-cell">₹${Number(
+                      emp.Annual_Package
+                    ).toLocaleString("en-IN")}</td>
+                    ${months
+                      .map(
+                        (month) => `
+                        <td class="editable-cell" data-index="${index}" data-month="${month}">
+                            <input type="number" min="0" max="31" value="${
+                              emp[month + "_Absent"] || 0
+                            }" 
+                                   onchange="updateAbsence(${index}, '${month}', this.value)"
+                                   class="absence-input">
+                        </td>
+                    `
+                      )
+                      .join("")}
+                    <td class="remarks-cell" onclick="openRemarksModal(${index}, '${
+            emp.Name
+          }', '${(emp.Remarks || "").replace(/'/g, "\\'")}')">
+                        <div class="remarks-display">
+                            <span class="remarks-text">${
+                              emp.Remarks || "<em>Click to add...</em>"
+                            }</span>
+                            <i class="fas fa-edit remarks-icon"></i>
+                        </div>
+                    </td>
+                    <td class="actions-cell">
+                        <button class="btn-icon btn-delete" onclick="deleteEmployee(${index})" title="Delete Employee">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+          tbody.appendChild(row);
+        });
+      }
+
+      async function updateAbsence(index, month, value) {
+        try {
+          const data = {};
+          data[`${month}_Absent`] = parseInt(value) || 0;
+
+          const response = await fetch(`/api/employees/${index}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          const result = await response.json();
+          if (result.success) {
+            showToast("Absence updated!", "success");
+          }
+        } catch (error) {
+          showToast("Error updating absence", "error");
+        }
+      }
+
+      async function deleteEmployee(index) {
+        if (!confirm("Are you sure you want to delete this employee?")) return;
+
+        try {
+          const response = await fetch(`/api/employees/${index}`, {
+            method: "DELETE",
+          });
+          const result = await response.json();
+          if (result.success) {
+            showToast("Employee deleted!", "success");
+            loadEmployees();
+          }
+        } catch (error) {
+          showToast("Error deleting employee", "error");
+        }
+      }
+
+      async function updateRemarks(index, value) {
+        try {
+          const response = await fetch(`/api/employees/${index}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ Remarks: value }),
+          });
+          const result = await response.json();
+          if (result.success) {
+            showToast("Remarks updated!", "success");
+            loadEmployees();
+          }
+        } catch (error) {
+          showToast("Error updating remarks", "error");
+        }
+      }
+
+      // Modal functions
+      let currentRemarksIndex = null;
+
+      function openRemarksModal(index, employeeName, remarks) {
+        currentRemarksIndex = index;
+        document.getElementById("remarksEmployeeName").textContent =
+          employeeName;
+        document.getElementById("remarksText").value = remarks || "";
+        document.getElementById("remarksModal").classList.add("show");
+        document.getElementById("remarksText").focus();
+      }
+
+      function closeRemarksModal() {
+        document.getElementById("remarksModal").classList.remove("show");
+        currentRemarksIndex = null;
+      }
+
+      async function saveRemarks() {
+        if (currentRemarksIndex === null) return;
+        const value = document.getElementById("remarksText").value;
+        await updateRemarks(currentRemarksIndex, value);
+        closeRemarksModal();
+      }
+
+      // Close modal on escape key
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeRemarksModal();
+      });
+
+      // Close modal on overlay click
+      document.getElementById("remarksModal").addEventListener("click", (e) => {
+        if (e.target.classList.contains("modal-overlay")) closeRemarksModal();
+      });
+
+      function showToast(message, type) {
+        const toast = document.getElementById("toast");
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => toast.classList.remove("show"), 3000);
+      }
+    </script>
+  </body>
+</html>
