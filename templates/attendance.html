@@ -238,6 +238,8 @@
 
         employees.forEach((emp, index) => {
           const row = document.createElement("tr");
+          const remarksText = emp.Remarks || "";
+          const remarksDisplay = emp.Remarks || "<em>Click to add...</em>";
           row.innerHTML = `
                     <td class="sticky-col">${emp.Name}</td>
                     <td class="package-cell">₹${Number(
@@ -256,13 +258,11 @@
                     `
                       )
                       .join("")}
-                    <td class="remarks-cell" onclick="openRemarksModal(${index}, '${
+                    <td class="remarks-cell" data-index="${index}" data-name="${
             emp.Name
-          }', '${(emp.Remarks || "").replace(/'/g, "\\'")}')">
+          }" data-remarks="${encodeURIComponent(remarksText)}">
                         <div class="remarks-display">
-                            <span class="remarks-text">${
-                              emp.Remarks || "<em>Click to add...</em>"
-                            }</span>
+                            <span class="remarks-text">${remarksDisplay}</span>
                             <i class="fas fa-edit remarks-icon"></i>
                         </div>
                     </td>
@@ -272,6 +272,17 @@
                         </button>
                     </td>
                 `;
+
+          // Add click handler for remarks cell
+          row
+            .querySelector(".remarks-cell")
+            .addEventListener("click", function () {
+              const idx = parseInt(this.dataset.index);
+              const name = this.dataset.name;
+              const remarks = decodeURIComponent(this.dataset.remarks);
+              openRemarksModal(idx, name, remarks);
+            });
+
           tbody.appendChild(row);
         });
       }

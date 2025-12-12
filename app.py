@@ -62,6 +62,12 @@ def salary():
 @app.route('/api/employees', methods=['GET'])
 def get_employees():
     df = load_data()
+    # Replace NaN values with empty strings for Remarks and 0 for absent days
+    df = df.fillna({'Remarks': ''})
+    for month in MONTHS:
+        col = f'{month}_Absent'
+        if col in df.columns:
+            df[col] = df[col].fillna(0).astype(int)
     data = df.to_dict('records')
     return jsonify(data)
 
